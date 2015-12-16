@@ -98,6 +98,9 @@ int main()
         return 1;
     }
 
+    cout<<"Ready \n";
+    std::cin.ignore();
+
     for(i = 0 ; i < (sizeof(noteArray0) / sizeof(noteStruct)) ; i++){
         unsigned int note = noteArray0[i].note;
         unsigned int delay = noteArray0[i].delay;
