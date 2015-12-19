@@ -55,16 +55,18 @@ int playNoteOnSteamController(libusb_device_handle *dev_handle, unsigned int not
     dataBlob[8] = repeatCount / 0xff;
 
     int r;
-    r = libusb_control_transfer(dev_handle,0x21,9,0x0300,2,dataBlob,64,1000);
+    r = libusb_control_transfer(dev_handle,0x21,9,0x0300,2,dataBlob,64,1000);       //Right haptic
     if(r < 0) {
         cout<<"Command Error "<<r<<endl;
+        std::cin.ignore();
         return 1;
     }
 
     dataBlob[2] = 0x01;
-    r = libusb_control_transfer(dev_handle,0x21,9,0x0300,2,dataBlob,64,1000);
+    r = libusb_control_transfer(dev_handle,0x21,9,0x0300,2,dataBlob,64,1000);       //Left haptic
     if(r < 0) {
         cout<<"Command Error "<<r<<endl;
+        std::cin.ignore();
         return 1;
     }
     return 0;
@@ -77,30 +79,36 @@ int main()
     int r; //for return values
     unsigned int i;
 
-    r = libusb_init(&ctx); //initialize the library for the session we just declared
+    //Initializing LIBUSB
+    r = libusb_init(&ctx);
     if(r < 0) {
         cout<<"Init Error "<<r<<endl;
+        std::cin.ignore();
         return 1;
     }
 
     libusb_set_debug(ctx, 3);
 
+    //Open Steam Controller device
     dev_handle = libusb_open_device_with_vid_pid(ctx, 0x28DE, 0x1102); // Wired Steam Controller VID & PID
     if(dev_handle == NULL){
         cout<<"Cannot open device"<<endl;
+        std::cin.ignore();
         return 1;
     }
 
-
+    //Claim the USB interface controlling the haptic actuators
     r = libusb_claim_interface(dev_handle,2);
     if(r < 0) {
         cout<<"Claim Error "<<r<<endl;
+        std::cin.ignore();
         return 1;
     }
 
-    cout<<"Ready \n";
+    cout<<"Steam Controller Singer by Pila\nReady. Press Enter to start \n";
     std::cin.ignore();
 
+    //Play
     for(i = 0 ; i < (sizeof(noteArray0) / sizeof(noteStruct)) ; i++){
         unsigned int note = noteArray0[i].note;
         unsigned int delay = noteArray0[i].delay;
@@ -110,35 +118,8 @@ int main()
             if(r != 0)
                 return 1;
         }
-        cout << "Playing : "<<note<<"\n";
+        cout << "Playing note " << note << " for "<< delay <<" ms \n";
         delay_ms(delay);
     }
-
-
-    /*unsigned char data[64] = {0x8f,
-                              0x07,
-                              0x01, //Trackpad select : 0x01 = left, 0x00 = right
-                              0xff, //LSB Pulse High Duration
-                              0xff, //MSB Pulse High Duration
-                              0xff, //LSB Pulse Low Duration
-                              0xff, //MSB Pulse Low Duration
-                              0xff, //LSB Pulse repeat count
-                              0x04, //MSB Pulse repeat count
-                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    while(1){
-        r = libusb_control_transfer(dev_handle,0x21,9,0x0300,2,data,64,1000);
-        if(r < 0) {
-            cout<<"Command Error "<<r<<endl;
-            return 1;
-        }
-        else {
-            cout<<"Command Success "<<r<<endl;
-        }
-        std::cin.ignore();
-    }
-    */
     return 0;
 }
