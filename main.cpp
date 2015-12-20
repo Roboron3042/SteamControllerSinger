@@ -97,6 +97,9 @@ int main()
         return 1;
     }
 
+    //On Linux, automatically detach and reattach kernel module
+    libusb_set_auto_detach_kernel_driver(dev_handle,1);
+
     //Claim the USB interface controlling the haptic actuators
     r = libusb_claim_interface(dev_handle,2);
     if(r < 0) {
