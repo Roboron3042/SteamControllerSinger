@@ -79,6 +79,7 @@ int main()
     int r; //for return values
     unsigned int i;
 
+
     //Initializing LIBUSB
     r = libusb_init(&ctx);
     if(r < 0) {
@@ -103,7 +104,7 @@ int main()
     //Claim the USB interface controlling the haptic actuators
     r = libusb_claim_interface(dev_handle,2);
     if(r < 0) {
-        cout<<"Claim Error "<<r<<endl;
+        cout<<"Interface claim Error "<<r<<endl;
         std::cin.ignore();
         return 1;
     }
@@ -124,5 +125,15 @@ int main()
         cout << "Playing note " << note << " for "<< delay <<" ms \n";
         delay_ms(delay);
     }
+
+    r = libusb_release_interface(dev_handle,2);
+    if(r < 0) {
+        cout<<"Interface release Error "<<r<<endl;
+        std::cin.ignore();
+        return 1;
+    }
+
+    libusb_close(dev_handle);
+
     return 0;
 }
