@@ -78,7 +78,9 @@ int main()
     libusb_context *ctx = NULL; //a libusb session
     int r; //for return values
     unsigned int i;
+    int interface_num = 0;
 
+    cout <<"Steam Controller Singer by Pila"<<endl;
 
     //Initializing LIBUSB
     r = libusb_init(&ctx);
@@ -88,12 +90,19 @@ int main()
         return 1;
     }
 
-    libusb_set_debug(ctx, 3);
+    //libusb_set_debug(ctx, 3);
 
     //Open Steam Controller device
-    dev_handle = libusb_open_device_with_vid_pid(ctx, 0x28DE, 0x1102); // Wired Steam Controller VID & PID
-    if(dev_handle == NULL){
-        cout<<"Cannot open device"<<endl;
+    if((dev_handle = libusb_open_device_with_vid_pid(ctx, 0x28DE, 0x1102)) != NULL){ // Wired Steam Controller
+        cout<<"Found wired Steam Controller"<<endl;
+        interface_num = 2;
+    }
+    else if((dev_handle = libusb_open_device_with_vid_pid(ctx, 0x28DE, 0x1142)) != NULL){ // Steam Controller dongle
+        cout<<"Found Steam Dongle, will attempt to use the first Steam Controller"<<endl;
+        interface_num = 1;
+    }
+    else{
+        cout<<"No device found"<<endl;
         std::cin.ignore();
         return 1;
     }
@@ -102,14 +111,14 @@ int main()
     libusb_set_auto_detach_kernel_driver(dev_handle,1);
 
     //Claim the USB interface controlling the haptic actuators
-    r = libusb_claim_interface(dev_handle,2);
+    r = libusb_claim_interface(dev_handle,interface_num);
     if(r < 0) {
         cout<<"Interface claim Error "<<r<<endl;
         std::cin.ignore();
         return 1;
     }
 
-    cout<<"Steam Controller Singer by Pila\nReady. Press Enter to start \n";
+    cout<<"Ready. Press Enter to start"<<endl;
     std::cin.ignore();
 
     //Play
@@ -122,11 +131,11 @@ int main()
             if(r != 0)
                 return 1;
         }
-        cout << "Playing note " << note << " for "<< delay <<" ms \n";
+        cout << "Playing note " << note << " for "<< delay <<" ms"<<endl;
         delay_ms(delay);
     }
 
-    r = libusb_release_interface(dev_handle,2);
+    r = libusb_release_interface(dev_handle,interface_num);
     if(r < 0) {
         cout<<"Interface release Error "<<r<<endl;
         std::cin.ignore();
