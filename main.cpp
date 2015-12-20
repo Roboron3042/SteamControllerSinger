@@ -127,7 +127,7 @@ int main()
         unsigned int delay = noteArray0[i].delay;
 
         if(note != 0){
-            r = playNoteOnSteamController(dev_handle,note,delay);
+            r = playNoteOnSteamController(dev_handle,note,delay-20);
             if(r != 0)
                 return 1;
         }
