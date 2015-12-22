@@ -90,7 +90,7 @@ int main()
         return 1;
     }
 
-    //libusb_set_debug(ctx, 3);
+    libusb_set_debug(ctx, 3);
 
     //Open Steam Controller device
     if((dev_handle = libusb_open_device_with_vid_pid(ctx, 0x28DE, 0x1102)) != NULL){ // Wired Steam Controller
