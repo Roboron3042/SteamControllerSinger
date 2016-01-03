@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <midifile.h>
+#include "midifile.h"
 
 /*
  * Data Types

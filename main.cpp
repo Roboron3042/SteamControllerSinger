@@ -2,9 +2,13 @@
 #include <stdint-gcc.h>
 #include <unistd.h>
 #include <stdint.h>
+
 #include "libusb/libusb.h"
+#include "midifile/midifile.h"
 
 #define STEAM_CONTROLLER_MAGIC_PERIOD_RATIO 495483.0
+#define HAPTIC_LEFT   1
+#define HAPTIC_RIGHT  0
 
 using namespace std;
 
@@ -23,7 +27,8 @@ void delay_ms(unsigned int ms){
         usleep(1000);
 }
 
-int playNoteOnSteamController(libusb_device_handle *dev_handle, unsigned int note,unsigned int delay ){
+
+int playNoteOnSteamController(libusb_device_handle *dev_handle, int haptic, unsigned int note,unsigned int delay ){
     unsigned char dataBlob[64] = {0x8f,
                                   0x07,
                                   0x00, //Trackpad select : 0x01 = left, 0x00 = right
@@ -47,6 +52,7 @@ int playNoteOnSteamController(libusb_device_handle *dev_handle, unsigned int not
 
     cout << "Frequency : " <<frequency << ", Period : "<<periodCommand << ", Repeat : "<< repeatCount <<"\n";
 
+    dataBlob[2] = (haptic == HAPTIC_LEFT) ? 0x01 : 0x00;
     dataBlob[3] = periodCommand % 0xff;
     dataBlob[4] = periodCommand / 0xff;
     dataBlob[5] = periodCommand % 0xff;
@@ -55,20 +61,13 @@ int playNoteOnSteamController(libusb_device_handle *dev_handle, unsigned int not
     dataBlob[8] = repeatCount / 0xff;
 
     int r;
-    r = libusb_control_transfer(dev_handle,0x21,9,0x0300,2,dataBlob,64,1000);       //Right haptic
+    r = libusb_control_transfer(dev_handle,0x21,9,0x0300,2,dataBlob,64,1000);
     if(r < 0) {
         cout<<"Command Error "<<r<<endl;
         std::cin.ignore();
         return 1;
     }
 
-    dataBlob[2] = 0x01;
-    r = libusb_control_transfer(dev_handle,0x21,9,0x0300,2,dataBlob,64,1000);       //Left haptic
-    if(r < 0) {
-        cout<<"Command Error "<<r<<endl;
-        std::cin.ignore();
-        return 1;
-    }
     return 0;
 }
 
@@ -127,7 +126,7 @@ int main()
         unsigned int delay = noteArray0[i].delay;
 
         if(note != 0){
-            r = playNoteOnSteamController(dev_handle,note,delay-20);
+            r = playNoteOnSteamController(dev_handle,HAPTIC_LEFT,note,delay-20);
             if(r != 0)
                 return 1;
         }
