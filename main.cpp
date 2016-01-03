@@ -71,32 +71,38 @@ int playNoteOnSteamController(libusb_device_handle *dev_handle, int haptic, unsi
     return 0;
 }
 
-int main()
+int main(int argc, char** argv)
 {
     libusb_device_handle *dev_handle; //a device handle
-    libusb_context *ctx = NULL; //a libusb session
-    int r; //for return values
-    unsigned int i;
     int interface_num = 0;
 
+    int r; //for return values
+    unsigned int i;
+
+
     cout <<"Steam Controller Singer by Pila"<<endl;
+    if(argc != 2){
+        cout << "Usage : " << argv[0] << " midisong.mid" << endl;
+        return 1;
+    }
+
 
     //Initializing LIBUSB
-    r = libusb_init(&ctx);
+    r = libusb_init(NULL);
     if(r < 0) {
         cout<<"Init Error "<<r<<endl;
         std::cin.ignore();
         return 1;
     }
 
-    libusb_set_debug(ctx, 3);
+    libusb_set_debug(NULL, 3);
 
     //Open Steam Controller device
-    if((dev_handle = libusb_open_device_with_vid_pid(ctx, 0x28DE, 0x1102)) != NULL){ // Wired Steam Controller
+    if((dev_handle = libusb_open_device_with_vid_pid(NULL, 0x28DE, 0x1102)) != NULL){ // Wired Steam Controller
         cout<<"Found wired Steam Controller"<<endl;
         interface_num = 2;
     }
-    else if((dev_handle = libusb_open_device_with_vid_pid(ctx, 0x28DE, 0x1142)) != NULL){ // Steam Controller dongle
+    else if((dev_handle = libusb_open_device_with_vid_pid(NULL, 0x28DE, 0x1142)) != NULL){ // Steam Controller dongle
         cout<<"Found Steam Dongle, will attempt to use the first Steam Controller"<<endl;
         interface_num = 1;
     }
@@ -118,8 +124,11 @@ int main()
         return 1;
     }
 
-    cout<<"Ready. Press Enter to start"<<endl;
-    std::cin.ignore();
+    cout<<"Loading midi file"<<endl;
+
+
+
+
 
     //Play
     for(i = 0 ; i < (sizeof(noteArray0) / sizeof(noteStruct)) ; i++){
