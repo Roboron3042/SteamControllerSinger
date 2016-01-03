@@ -27,8 +27,40 @@ void delay_ms(unsigned int ms){
         usleep(1000);
 }
 
+libusb_device_handle* SteamController_OpenAndClaim(int *interface_num){
+    libusb_device_handle* dev_handle;
+    //Open Steam Controller device
+    if((dev_handle = libusb_open_device_with_vid_pid(NULL, 0x28DE, 0x1102)) != NULL){ // Wired Steam Controller
+        cout<<"Found wired Steam Controller"<<endl;
+        (*interface_num) = 2;
+    }
+    else if((dev_handle = libusb_open_device_with_vid_pid(NULL, 0x28DE, 0x1142)) != NULL){ // Steam Controller dongle
+        cout<<"Found Steam Dongle, will attempt to use the first Steam Controller"<<endl;
+        (*interface_num) = 1;
+    }
+    else{
+        cout<<"No device found"<<endl;
+        std::cin.ignore();
+        return NULL;
+    }
 
-int playNoteOnSteamController(libusb_device_handle *dev_handle, int haptic, unsigned int note,unsigned int delay ){
+    //On Linux, automatically detach and reattach kernel module
+    libusb_set_auto_detach_kernel_driver(dev_handle,1);
+
+    //Claim the USB interface controlling the haptic actuators
+    int r = libusb_claim_interface(dev_handle,(*interface_num));
+    if(r < 0) {
+        cout<<"Interface claim Error "<<r<<endl;
+        std::cin.ignore();
+        libusb_close(dev_handle);
+        return NULL;
+    }
+
+    return dev_handle;
+}
+
+
+int SteamController_PlayNote(libusb_device_handle *dev_handle, int haptic, unsigned int note,unsigned int delay ){
     unsigned char dataBlob[64] = {0x8f,
                                   0x07,
                                   0x00, //Trackpad select : 0x01 = left, 0x00 = right
@@ -76,16 +108,17 @@ int main(int argc, char** argv)
     libusb_device_handle *dev_handle; //a device handle
     int interface_num = 0;
 
+    MidiFile_t midifile;
+
     int r; //for return values
     unsigned int i;
 
-
     cout <<"Steam Controller Singer by Pila"<<endl;
+
     if(argc != 2){
         cout << "Usage : " << argv[0] << " midisong.mid" << endl;
         return 1;
     }
-
 
     //Initializing LIBUSB
     r = libusb_init(NULL);
@@ -97,36 +130,14 @@ int main(int argc, char** argv)
 
     libusb_set_debug(NULL, 3);
 
-    //Open Steam Controller device
-    if((dev_handle = libusb_open_device_with_vid_pid(NULL, 0x28DE, 0x1102)) != NULL){ // Wired Steam Controller
-        cout<<"Found wired Steam Controller"<<endl;
-        interface_num = 2;
-    }
-    else if((dev_handle = libusb_open_device_with_vid_pid(NULL, 0x28DE, 0x1142)) != NULL){ // Steam Controller dongle
-        cout<<"Found Steam Dongle, will attempt to use the first Steam Controller"<<endl;
-        interface_num = 1;
-    }
-    else{
-        cout<<"No device found"<<endl;
-        std::cin.ignore();
+    //Gaining access to Steam Controller
+    dev_handle = SteamController_OpenAndClaim(&interface_num);
+    if(dev_handle == NULL)
         return 1;
-    }
-
-    //On Linux, automatically detach and reattach kernel module
-    libusb_set_auto_detach_kernel_driver(dev_handle,1);
-
-    //Claim the USB interface controlling the haptic actuators
-    r = libusb_claim_interface(dev_handle,interface_num);
-    if(r < 0) {
-        cout<<"Interface claim Error "<<r<<endl;
-        std::cin.ignore();
-        libusb_close(dev_handle);
-        return 1;
-    }
 
     cout<<"Loading midi file"<<endl;
 
-
+    midifile = MidiFile_load(argv[1]);
 
 
 
@@ -136,7 +147,7 @@ int main(int argc, char** argv)
         unsigned int delay = noteArray0[i].delay;
 
         if(note != 0){
-            r = playNoteOnSteamController(dev_handle,HAPTIC_LEFT,note,delay-20);
+            r = SteamController_PlayNote(dev_handle,HAPTIC_LEFT,note,delay-20);
             if(r != 0)
                 break;
         }
