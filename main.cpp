@@ -114,6 +114,7 @@ int main()
     if(r < 0) {
         cout<<"Interface claim Error "<<r<<endl;
         std::cin.ignore();
+        libusb_close(dev_handle);
         return 1;
     }
 
@@ -128,7 +129,7 @@ int main()
         if(note != 0){
             r = playNoteOnSteamController(dev_handle,HAPTIC_LEFT,note,delay-20);
             if(r != 0)
-                return 1;
+                break;
         }
         cout << "Playing note " << note << " for "<< delay <<" ms"<<endl;
         delay_ms(delay);
@@ -140,7 +141,6 @@ int main()
         std::cin.ignore();
         return 1;
     }
-
     libusb_close(dev_handle);
 
     return 0;
