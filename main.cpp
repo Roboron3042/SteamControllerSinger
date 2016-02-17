@@ -93,8 +93,15 @@ int SteamController_PlayNote(libusb_device_handle *dev_handle, int haptic, unsig
     return 0;
 }
 
-void playSong(libusb_device_handle *steamcontroller_handle, char* songfile){
+float timeElapsedSince(std::chrono::steady_clock::time_point tOrigin){
     using namespace std::chrono;
+    steady_clock::time_point tNow = steady_clock::now();
+    duration<double> time_span = duration_cast<duration<double>>(tNow - tOrigin);
+    return time_span.count();
+}
+
+void playSong(libusb_device_handle *steamcontroller_handle, char* songfile){
+
     MidiFile_t midifile;
 
     cout << "Loading midi file " << songfile << endl;
@@ -118,7 +125,7 @@ void playSong(libusb_device_handle *steamcontroller_handle, char* songfile){
     std::cin.ignore();
 
     //Get current time point, will be used to know elapsed time
-    steady_clock::time_point t1 = steady_clock::now();
+    std::chrono::steady_clock::time_point tOrigin = std::chrono::steady_clock::now();
 
     //Iterate through events
     MidiFileEvent_t currentEvent;
@@ -129,13 +136,8 @@ void playSong(libusb_device_handle *steamcontroller_handle, char* songfile){
             long currentEventTick = MidiFileEvent_getTick(currentEvent);
             float currentEventTime = MidiFile_getTimeFromTick(midifile,currentEventTick);
 
-            //Computing elapsed time since previous event
-            steady_clock::time_point t2 = steady_clock::now();
-            duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
-            float timeElapsed = time_span.count();
-
             //If required, wait for event
-            int waitTime = (currentEventTime - timeElapsed) * 1000;
+            int waitTime = (currentEventTime - timeElapsedSince(tOrigin)) * 1000.0f;
             if (waitTime > 0) {
                 delay_ms(waitTime);
             }

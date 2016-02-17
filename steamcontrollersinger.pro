@@ -12,4 +12,3 @@ win32:LIBS += $${_PRO_FILE_PWD_}/libusb/libusb-1.0.a
 HEADERS += \
     libusb/libusb.h \
     midifile/midifile.h
-
