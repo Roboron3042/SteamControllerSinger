@@ -225,5 +225,7 @@ int main(int argc, char** argv)
     }
     libusb_close(dev_handle);
 
+    libusb_exit(NULL);
+
     return 0;
 }
