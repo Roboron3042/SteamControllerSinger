@@ -81,8 +81,7 @@ int SteamController_PlayNote(libusb_device_handle *dev_handle, int haptic, unsig
     int r;
     r = libusb_control_transfer(dev_handle,0x21,9,0x0300,2,dataBlob,64,1000);
     if(r < 0) {
-        cout<<"Command Error "<<r<<endl;
-        std::cin.ignore();
+        cout<<"Command Error "<<r<< endl;
         return 1;
     }
 
