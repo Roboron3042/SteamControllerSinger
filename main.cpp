@@ -170,7 +170,6 @@ void playSong(libusb_device_handle *steamcontroller_handle, char* songfile){
             //Get event note
             int eventNote = MidiFileNoteStartEvent_getNote(selectedEvent);
 
-            duration-= 0.02f;   //This is to deal with wireless lagg happening sometimes
             SteamController_PlayNote(steamcontroller_handle,i,eventNote,duration);
 
             cout << ((i == 0) ? "RIGHT" : "LEFT ") << " haptic : note " << eventNote << " for "<< (int)(duration*1000) << " ms" <<endl;
