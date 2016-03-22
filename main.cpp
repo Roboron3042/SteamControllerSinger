@@ -9,6 +9,7 @@
 
 #define STEAM_CONTROLLER_MAGIC_PERIOD_RATIO 495483.0
 #define CHANNEL_COUNT                       2
+#define DEFAULT_INTERVAL_USEC               10000
 
 using namespace std;
 
@@ -95,7 +96,7 @@ float timeElapsedSince(std::chrono::steady_clock::time_point tOrigin){
     return time_span.count();
 }
 
-void playSong(libusb_device_handle *steamcontroller_handle, char* songfile){
+void playSong(libusb_device_handle *steamcontroller_handle, char* songfile, unsigned int sleepIntervalUsec){
 
     MidiFile_t midifile;
 
@@ -125,7 +126,7 @@ void playSong(libusb_device_handle *steamcontroller_handle, char* songfile){
     //Iterate through events
     MidiFileEvent_t currentEvent = MidiFile_getFirstEvent(midifile);
     while(currentEvent != NULL){
-        usleep(10000);
+        usleep(sleepIntervalUsec);
 
         //We now need to play all events with tick < currentTime
         long currentTick = MidiFile_getTickFromTime(midifile,timeElapsedSince(tOrigin));
@@ -183,16 +184,45 @@ int main(int argc, char** argv)
 {
     libusb_device_handle *dev_handle; //a device handle
     int interface_num = 0;
+    unsigned int intervalUSec = DEFAULT_INTERVAL_USEC;
+    int libusbDebugLevel = LIBUSB_LOG_LEVEL_NONE;
+    char* midiSong;
 
 
     int r; //for return values
 
     cout <<"Steam Controller Singer by Pila"<<endl;
 
-    if(argc != 2){
-        cout << "Usage : " << argv[0] << " midisong.mid" << endl;
+    if(argc < 2){
+        cout << "Usage : steamcontrollersinger MIDI_FILE [-dDEBUG_LEVEL] [-iINTERVAL]" << endl;
         return 1;
     }
+
+
+    //Parse arguments
+    midiSong = argv[1];
+
+    for(int i = 2 ; i < argc ; i++){
+        if(argv[i][0] != '-') continue;
+
+        unsigned long int value = strtoul(&argv[i][2],NULL,10);
+
+        switch(argv[i][1]){
+        case 'd':
+            if(value <= LIBUSB_LOG_LEVEL_DEBUG){
+                libusbDebugLevel = value;
+            }
+            break;
+        case 'i':
+            if(value <= 1000000){
+                intervalUSec = value;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
 
     //Initializing LIBUSB
     r = libusb_init(NULL);
@@ -202,7 +232,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    libusb_set_debug(NULL, 3);
+    libusb_set_debug(NULL, libusbDebugLevel);
 
     //Gaining access to Steam Controller
     dev_handle = SteamController_OpenAndClaim(&interface_num);
@@ -211,7 +241,7 @@ int main(int argc, char** argv)
 
 
     //Playing song
-    playSong(dev_handle,argv[1]);
+    playSong(dev_handle,midiSong,intervalUSec);
 
 
     //Releasing access to Steam Controller
