@@ -124,8 +124,7 @@ void displayCurrentNote(int channel, unsigned int note){
     if(channel >= CHANNEL_COUNT)
         return;
 
-    notePerChannel[channel] = note;
-
+    notePerChannel[CHANNEL_COUNT-1-channel] = note;
 
     for(int i = 0 ; i < CHANNEL_COUNT ; i++){
         cout << textPerChannel[i];
