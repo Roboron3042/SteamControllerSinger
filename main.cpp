@@ -186,13 +186,13 @@ struct ParamsStruct{
     const char* midiSong;
     unsigned int intervalUSec;
     int libusbDebugLevel;
-    bool demoMode;
+    bool repeatSong;
 };
 
 
 bool parseArguments(int argc, char** argv, ParamsStruct* params){
     int c;
-    while ( (c = getopt(argc, argv, "di:l:")) != -1) {
+    while ( (c = getopt(argc, argv, "l:i:r")) != -1) {
         unsigned long int value = strtoul(optarg,NULL,10);
         switch(c){
         case 'l':
@@ -205,16 +205,16 @@ bool parseArguments(int argc, char** argv, ParamsStruct* params){
                 params->intervalUSec = value;
             }
             break;
-        case 'd':
-            params->demoMode = true;
+        case 'r':
+            params->repeatSong = true;
+            break;
+        case '?':
+            return false;
             break;
         default:
             break;
         }
     }
-
-    cout << "optind : "<<optind << ",argc " << argc <<  endl;
-
     if(optind == argc-1 ){
         params->midiSong = argv[optind];
         return true;
@@ -236,15 +236,13 @@ int main(int argc, char** argv)
     ParamsStruct params;
     params.intervalUSec = DEFAULT_INTERVAL_USEC;
     params.libusbDebugLevel = LIBUSB_LOG_LEVEL_NONE;
-    params.demoMode = false;
+    params.repeatSong = false;
     params.midiSong = "\0";
-
-
 
 
     //Parse arguments
     if(!parseArguments(argc, argv, &params)){
-        cout << "Usage : steamcontrollersinger [-d][-lDEBUG_LEVEL] [-iINTERVAL] MIDI_FILE" << endl;
+        cout << "Usage : steamcontrollersinger [-r][-lDEBUG_LEVEL] [-iINTERVAL] MIDI_FILE" << endl;
         return 1;
     }
 
@@ -268,7 +266,7 @@ int main(int argc, char** argv)
     //Playing song
     do{
         playSong(dev_handle,params.midiSong,params.intervalUSec);
-    }while(params.demoMode);
+    }while(params.repeatSong);
 
 
     //Releasing access to Steam Controller
