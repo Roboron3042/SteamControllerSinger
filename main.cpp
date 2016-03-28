@@ -114,32 +114,35 @@ bool isThisEventMaskingPreviousEvent(MidiFileEvent_t currentEvent, MidiFileEvent
             && MidiFileEvent_getTick(currentEvent) == MidiFileEvent_getTick(previousEvent));
 }
 
+
+
 void displayCurrentNote(int channel, unsigned int note){
+    static unsigned int notePerChannel[CHANNEL_COUNT] = {NOTE_STOP, NOTE_STOP};
+    const char* textPerChannel[CHANNEL_COUNT] = {"LEFT haptic : ",", RIGHT haptic : "};
     const char* noteBaseNameArray[12] = {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
 
-    switch(channel){
-    case 0:
-        cout << "RIGHT haptic : ";
-        break;
-    case 1:
-        cout << "LEFT  haptic : ";
-        break;
-    default:
+    if(channel >= CHANNEL_COUNT)
         return;
-    }
+
+    notePerChannel[channel] = note;
 
 
+    for(int i = 0 ; i < CHANNEL_COUNT ; i++){
+        cout << textPerChannel[i];
 
-    //Write empty string
-    if(note >= NOTE_STOP){
-        cout << "OFF";
+        //Write empty string
+        if(notePerChannel[i] >= NOTE_STOP){
+            cout << "OFF";
+        }
+        else{
+            //Write note name
+            cout << noteBaseNameArray[notePerChannel[i]%12];
+            cout << (notePerChannel[i]/12)-1;
+        }
     }
-    else{
-        //Write note name
-        cout << noteBaseNameArray[note%12];
-        cout << (note/12)-1;
-    }
-    cout << endl;
+
+    cout << "           \r" ;
+    cout.flush();
 }
 
 void playSong(libusb_device_handle *steamcontroller_handle, const char* songfile, unsigned int sleepIntervalUsec){
@@ -163,7 +166,6 @@ void playSong(libusb_device_handle *steamcontroller_handle, const char* songfile
     //Waiting for user to press enter
     cout << "Starting playback of " <<songfile << endl;
     sleep(1);
-    cout << endl;
 
     //Get current time point, will be used to know elapsed time
     std::chrono::steady_clock::time_point tOrigin = std::chrono::steady_clock::now();
@@ -218,7 +220,7 @@ void playSong(libusb_device_handle *steamcontroller_handle, const char* songfile
 
     }
 
-    cout << "Playback completed " << endl;
+    cout <<endl<< "Playback completed " << endl;
 }
 
 
