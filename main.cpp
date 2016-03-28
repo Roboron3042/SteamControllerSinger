@@ -67,7 +67,8 @@ int SteamController_PlayNote(libusb_device_handle *dev_handle, int haptic, unsig
     double period = 1.0 / frequency;
     uint16_t periodCommand = period * STEAM_CONTROLLER_MAGIC_PERIOD_RATIO;
 
-    uint16_t repeatCount = duration / period;
+    //Compute number of repeat. If duration < 0, set to maximum
+    uint16_t repeatCount = (duration >= 0) ? (duration / period) : 0xFFFF;
 
     //cout << "Frequency : " <<frequency << ", Period : "<<periodCommand << ", Repeat : "<< repeatCount <<"\n";
 
