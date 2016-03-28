@@ -11,6 +11,9 @@
 #define CHANNEL_COUNT                       2
 #define DEFAULT_INTERVAL_USEC               10000
 
+#define DURATION_MAX        -1
+#define NOTE_STOP           128
+
 using namespace std;
 
 double midiFrequency[128]  = {8.1758, 8.66196, 9.17702, 9.72272, 10.3009, 10.9134, 11.5623, 12.2499, 12.9783, 13.75, 14.5676, 15.4339, 16.3516, 17.3239, 18.354, 19.4454, 20.6017, 21.8268, 23.1247, 24.4997, 25.9565, 27.5, 29.1352, 30.8677, 32.7032, 34.6478, 36.7081, 38.8909, 41.2034, 43.6535, 46.2493, 48.9994, 51.9131, 55, 58.2705, 61.7354, 65.4064, 69.2957, 73.4162, 77.7817, 82.4069, 87.3071, 92.4986, 97.9989, 103.826, 110, 116.541, 123.471, 130.813, 138.591, 146.832, 155.563, 164.814, 174.614, 184.997, 195.998, 207.652, 220, 233.082, 246.942, 261.626, 277.183, 293.665, 311.127, 329.628, 349.228, 369.994, 391.995, 415.305, 440, 466.164, 493.883, 523.251, 554.365, 587.33, 622.254, 659.255, 698.456, 739.989, 783.991, 830.609, 880, 932.328, 987.767, 1046.5, 1108.73, 1174.66, 1244.51, 1318.51, 1396.91, 1479.98, 1567.98, 1661.22, 1760, 1864.66, 1975.53, 2093, 2217.46, 2349.32, 2489.02, 2637.02, 2793.83, 2959.96, 3135.96, 3322.44, 3520, 3729.31, 3951.07, 4186.01, 4434.92, 4698.64, 4978.03, 5274.04, 5587.65, 5919.91, 6271.93, 6644.88, 7040, 7458.62, 7902.13, 8372.02, 8869.84, 9397.27, 9956.06, 10548.1, 11175.3, 11839.8, 12543.9};
@@ -48,7 +51,7 @@ libusb_device_handle* SteamController_OpenAndClaim(int *interface_num){
 }
 
 
-int SteamController_PlayNote(libusb_device_handle *dev_handle, int haptic, unsigned int note,double duration ){
+int SteamController_PlayNote(libusb_device_handle *dev_handle, int haptic, unsigned int note,double duration = DURATION_MAX){
     unsigned char dataBlob[64] = {0x8f,
                                   0x07,
                                   0x00, //Trackpad select : 0x01 = left, 0x00 = right
@@ -63,12 +66,17 @@ int SteamController_PlayNote(libusb_device_handle *dev_handle, int haptic, unsig
                                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
+    if(note >= NOTE_STOP){
+        note = 0;
+        duration = 0.0;
+    }
+
     double frequency = midiFrequency[note];
     double period = 1.0 / frequency;
     uint16_t periodCommand = period * STEAM_CONTROLLER_MAGIC_PERIOD_RATIO;
 
     //Compute number of repeat. If duration < 0, set to maximum
-    uint16_t repeatCount = (duration >= 0) ? (duration / period) : 0x7FFF;
+    uint16_t repeatCount = (duration >= 0.0) ? (duration / period) : 0x7FFF;
 
     //cout << "Frequency : " <<frequency << ", Period : "<<periodCommand << ", Repeat : "<< repeatCount <<"\n";
 
@@ -103,6 +111,15 @@ bool isThisEventMaskingPreviousEvent(MidiFileEvent_t currentEvent, MidiFileEvent
             && MidiFileNoteEndEvent_getChannel(currentEvent) == MidiFileNoteStartEvent_getChannel(previousEvent)
             && MidiFileNoteEndEvent_getNote(currentEvent) == MidiFileNoteStartEvent_getNote(previousEvent)
             && MidiFileEvent_getTick(currentEvent) == MidiFileEvent_getTick(previousEvent));
+}
+
+void displayPlayedNotes(int haptic, unsigned int note){
+    if(note == NOTE_STOP){
+        cout << ((haptic == 0) ? "RIGHT" : "LEFT ") << " haptic : OFF "  <<endl;
+    }
+    else{
+        cout << ((haptic == 0) ? "RIGHT" : "LEFT ") << " haptic : note " << note  <<endl;
+    }
 }
 
 void playSong(libusb_device_handle *steamcontroller_handle, const char* songfile, unsigned int sleepIntervalUsec){
@@ -165,21 +182,17 @@ void playSong(libusb_device_handle *steamcontroller_handle, const char* songfile
         for(int currentChannel = 0 ; currentChannel < CHANNEL_COUNT ; currentChannel++){
             MidiFileEvent_t selectedEvent = eventsToPlay[currentChannel];
 
-            //If no event available on the channel skip it
-            if(selectedEvent == NULL) continue;
+            //If no note event available on the channel, skip it
+            if(selectedEvent == NULL && !MidiFileEvent_isNoteEvent(selectedEvent)) continue;
 
+            //Set note event
+            unsigned int eventNote = NOTE_STOP;
             if(MidiFileEvent_isNoteStartEvent(selectedEvent)){
-                int eventNote = MidiFileNoteStartEvent_getNote(selectedEvent);
-                SteamController_PlayNote(steamcontroller_handle,currentChannel,eventNote,-1);
-                cout << ((currentChannel == 0) ? "RIGHT" : "LEFT ") << " haptic : note " << eventNote  <<endl;
+                eventNote = MidiFileNoteStartEvent_getNote(selectedEvent);
             }
-            else if(MidiFileEvent_isNoteEndEvent(selectedEvent)){
-                int eventNote = MidiFileNoteEndEvent_getNote(selectedEvent);
-                SteamController_PlayNote(steamcontroller_handle,currentChannel,eventNote,0);
-                cout << ((currentChannel == 0) ? "RIGHT" : "LEFT ") << " OFF" <<endl;
-            }
-            else continue;
 
+            SteamController_PlayNote(steamcontroller_handle,currentChannel,eventNote);
+            displayPlayedNotes(currentChannel, eventNote);
 
         }
     }
