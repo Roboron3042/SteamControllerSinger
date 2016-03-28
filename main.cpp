@@ -68,7 +68,7 @@ int SteamController_PlayNote(libusb_device_handle *dev_handle, int haptic, unsig
     uint16_t periodCommand = period * STEAM_CONTROLLER_MAGIC_PERIOD_RATIO;
 
     //Compute number of repeat. If duration < 0, set to maximum
-    uint16_t repeatCount = (duration >= 0) ? (duration / period) : 0xFFFF;
+    uint16_t repeatCount = (duration >= 0) ? (duration / period) : 0x7FFF;
 
     //cout << "Frequency : " <<frequency << ", Period : "<<periodCommand << ", Repeat : "<< repeatCount <<"\n";
 
@@ -95,6 +95,14 @@ float timeElapsedSince(std::chrono::steady_clock::time_point tOrigin){
     steady_clock::time_point tNow = steady_clock::now();
     duration<double> time_span = duration_cast<duration<double>>(tNow - tOrigin);
     return time_span.count();
+}
+
+bool isThisEventMaskingPreviousEvent(MidiFileEvent_t currentEvent, MidiFileEvent_t previousEvent){
+    return (MidiFileEvent_isNoteEndEvent(currentEvent)
+            && MidiFileEvent_isNoteStartEvent(previousEvent)
+            && MidiFileNoteEndEvent_getChannel(currentEvent) == MidiFileNoteStartEvent_getChannel(previousEvent)
+            && MidiFileNoteEndEvent_getNote(currentEvent) == MidiFileNoteStartEvent_getNote(previousEvent)
+            && MidiFileEvent_getTick(currentEvent) == MidiFileEvent_getTick(previousEvent));
 }
 
 void playSong(libusb_device_handle *steamcontroller_handle, const char* songfile, unsigned int sleepIntervalUsec){
@@ -136,43 +144,43 @@ void playSong(libusb_device_handle *steamcontroller_handle, const char* songfile
         //Iterate through all events until the current time
         for( ; currentEvent != NULL && MidiFileEvent_getTick(currentEvent) < currentTick ; currentEvent = MidiFileEvent_getNextEventInFile(currentEvent)){
 
-            //Only process Note Start events
-            if (!MidiFileEvent_isNoteStartEvent(currentEvent)) continue;
+            //Only process Note events
+            if (!MidiFileEvent_isNoteEvent(currentEvent)) continue;
 
             //Get channel event
-            int eventChannel = MidiFileNoteStartEvent_getChannel(currentEvent);
+            int eventChannel = MidiFileVoiceEvent_getChannel(currentEvent);
 
             //If channel is other than 0 or 1, skip this event, we cannot play it with only 1 steam controller
             if(eventChannel < 0 || !(eventChannel < CHANNEL_COUNT)) continue;
 
-            //If no end event, skip this event, we won't know when to stop
-            if(MidiFileNoteStartEvent_getNoteEndEvent(currentEvent) == NULL) continue;
+            //Check that this event is not masking another event
+            //( this can happen when OFF and ON events share same timetick ,note and channel if OFF events arrives after ON event)
+            if(isThisEventMaskingPreviousEvent(currentEvent, eventsToPlay[eventChannel])) continue;
 
             //If we arrive here, this event match all conditions
             eventsToPlay[eventChannel]=currentEvent;
         }
 
         //Now play the last events found
-        for(int i = 0 ; i < CHANNEL_COUNT ; i++){
-            MidiFileEvent_t selectedEvent = eventsToPlay[i];
+        for(int currentChannel = 0 ; currentChannel < CHANNEL_COUNT ; currentChannel++){
+            MidiFileEvent_t selectedEvent = eventsToPlay[currentChannel];
 
             //If no event available on the channel skip it
             if(selectedEvent == NULL) continue;
 
-            //Look for the matching note end event since we need to now how long to play
-            MidiFileEvent_t endEvent = MidiFileNoteStartEvent_getNoteEndEvent(selectedEvent);
+            if(MidiFileEvent_isNoteStartEvent(selectedEvent)){
+                int eventNote = MidiFileNoteStartEvent_getNote(selectedEvent);
+                SteamController_PlayNote(steamcontroller_handle,currentChannel,eventNote,-1);
+                cout << ((currentChannel == 0) ? "RIGHT" : "LEFT ") << " haptic : note " << eventNote  <<endl;
+            }
+            else if(MidiFileEvent_isNoteEndEvent(selectedEvent)){
+                int eventNote = MidiFileNoteEndEvent_getNote(selectedEvent);
+                SteamController_PlayNote(steamcontroller_handle,currentChannel,eventNote,0);
+                cout << ((currentChannel == 0) ? "RIGHT" : "LEFT ") << " OFF" <<endl;
+            }
+            else continue;
 
-            //Get duration
-            float selectedEventTime = MidiFile_getTimeFromTick(midifile,MidiFileEvent_getTick(selectedEvent));
-            float endEventTime = MidiFile_getTimeFromTick(midifile,MidiFileEvent_getTick(endEvent));
-            float duration = endEventTime - selectedEventTime;
 
-            //Get event note
-            int eventNote = MidiFileNoteStartEvent_getNote(selectedEvent);
-
-            SteamController_PlayNote(steamcontroller_handle,i,eventNote,duration);
-
-            cout << ((i == 0) ? "RIGHT" : "LEFT ") << " haptic : note " << eventNote << " for "<< (int)(duration*1000) << " ms" <<endl;
         }
     }
 
