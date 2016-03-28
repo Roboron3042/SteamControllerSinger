@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <chrono>
+#include <signal.h>
 
 #include "libusb/libusb.h"
 #include "midifile/midifile.h"
