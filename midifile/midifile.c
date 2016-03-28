@@ -351,7 +351,7 @@ static void remove_event(MidiFileEvent_t event)
  * Public API
  */
 
-MidiFile_t MidiFile_load(char *filename)
+MidiFile_t MidiFile_load(const char *filename)
 {
 	MidiFile_t midi_file;
 	FILE *in;
@@ -1472,13 +1472,11 @@ long MidiFile_getTickFromMeasureBeatTick(MidiFile_t midi_file, MidiFileMeasureBe
 	{
 		MidiFileTrack_t conductor_track = MidiFile_getFirstTrack(midi_file);
 		MidiFileEvent_t event;
-		long time_signature_event_tick = 0;
-		float time_signature_event_beat = 0.0;
+        float time_signature_event_beat = 0.0;
 		float time_signature_event_measure = 0.0;
 		long time_signature_event_visible_measure = 1;
 		long time_signature_event_visible_beat = 1;
-		float time_signature_event_visible_tick = 0.0;
-		int numerator = 4;
+        int numerator = 4;
 		int denominator = 4;
 
 		for (event = MidiFileTrack_getFirstEvent(conductor_track); event != NULL; event = MidiFileEvent_getNextEventInTrack(event))
@@ -1492,12 +1490,10 @@ long MidiFile_getTickFromMeasureBeatTick(MidiFile_t midi_file, MidiFileMeasureBe
 				long next_time_signature_event_visible_beat = (long)((next_time_signature_event_measure - (float)(next_time_signature_event_visible_measure - 1)) * numerator) + 1;
 				float next_time_signature_event_visible_tick = next_time_signature_event_tick - MidiFile_getTickFromBeat(midi_file, (float)((long)(next_time_signature_event_beat)));
 				if ((next_time_signature_event_visible_measure > MidiFileMeasureBeatTick_getMeasure(measure_beat_tick)) || ((next_time_signature_event_visible_measure == MidiFileMeasureBeatTick_getMeasure(measure_beat_tick)) && ((next_time_signature_event_visible_beat > MidiFileMeasureBeatTick_getBeat(measure_beat_tick)) || ((next_time_signature_event_visible_measure == MidiFileMeasureBeatTick_getBeat(measure_beat_tick)) && (next_time_signature_event_visible_tick >= MidiFileMeasureBeatTick_getTick(measure_beat_tick)))))) break;
-				time_signature_event_tick = next_time_signature_event_tick;
 				time_signature_event_beat = next_time_signature_event_beat;
 				time_signature_event_measure = next_time_signature_event_measure;
 				time_signature_event_visible_measure = next_time_signature_event_visible_measure;
 				time_signature_event_visible_beat = next_time_signature_event_visible_beat;
-				time_signature_event_visible_tick = next_time_signature_event_visible_tick;
 				numerator = MidiFileTimeSignatureEvent_getNumerator(event);
 				denominator = MidiFileTimeSignatureEvent_getDenominator(event);
 			}

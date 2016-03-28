@@ -97,11 +97,9 @@ float timeElapsedSince(std::chrono::steady_clock::time_point tOrigin){
     return time_span.count();
 }
 
-void playSong(libusb_device_handle *steamcontroller_handle, char* songfile, unsigned int sleepIntervalUsec){
+void playSong(libusb_device_handle *steamcontroller_handle, const char* songfile, unsigned int sleepIntervalUsec){
 
     MidiFile_t midifile;
-
-    cout << "Loading midi file " << songfile << endl;
 
     //Open Midi File
     midifile = MidiFile_load(songfile);
@@ -118,8 +116,8 @@ void playSong(libusb_device_handle *steamcontroller_handle, char* songfile, unsi
     }
 
     //Waiting for user to press enter
-    cout << "Ready, press ENTER to start";
-    std::cin.ignore();
+    cout << "Starting playback of " <<songfile << endl;
+    sleep(1);
 
     //Get current time point, will be used to know elapsed time
     std::chrono::steady_clock::time_point tOrigin = std::chrono::steady_clock::now();
@@ -181,47 +179,73 @@ void playSong(libusb_device_handle *steamcontroller_handle, char* songfile, unsi
     cout << "Playback completed " << endl;
 }
 
+
+
+
+struct ParamsStruct{
+    const char* midiSong;
+    unsigned int intervalUSec;
+    int libusbDebugLevel;
+    bool demoMode;
+};
+
+
+bool parseArguments(int argc, char** argv, ParamsStruct* params){
+    int c;
+    while ( (c = getopt(argc, argv, "di:l:")) != -1) {
+        unsigned long int value = strtoul(optarg,NULL,10);
+        switch(c){
+        case 'l':
+            if(value <= LIBUSB_LOG_LEVEL_DEBUG){
+                params->libusbDebugLevel = value;
+            }
+            break;
+        case 'i':
+            if(value <= 1000000){
+                params->intervalUSec = value;
+            }
+            break;
+        case 'd':
+            params->demoMode = true;
+            break;
+        default:
+            break;
+        }
+    }
+
+    cout << "optind : "<<optind << ",argc " << argc <<  endl;
+
+    if(optind == argc-1 ){
+        params->midiSong = argv[optind];
+        return true;
+    }
+    else{
+        return false;
+    }
+}
+
 int main(int argc, char** argv)
 {
     libusb_device_handle *dev_handle; //a device handle
     int interface_num = 0;
-    unsigned int intervalUSec = DEFAULT_INTERVAL_USEC;
-    int libusbDebugLevel = LIBUSB_LOG_LEVEL_NONE;
-    char* midiSong;
-
 
     int r; //for return values
 
     cout <<"Steam Controller Singer by Pila"<<endl;
 
-    if(argc < 2){
-        cout << "Usage : steamcontrollersinger MIDI_FILE [-dDEBUG_LEVEL] [-iINTERVAL]" << endl;
-        return 1;
-    }
+    ParamsStruct params;
+    params.intervalUSec = DEFAULT_INTERVAL_USEC;
+    params.libusbDebugLevel = LIBUSB_LOG_LEVEL_NONE;
+    params.demoMode = false;
+    params.midiSong = "\0";
+
+
 
 
     //Parse arguments
-    midiSong = argv[1];
-
-    for(int i = 2 ; i < argc ; i++){
-        if(argv[i][0] != '-') continue;
-
-        unsigned long int value = strtoul(&argv[i][2],NULL,10);
-
-        switch(argv[i][1]){
-        case 'd':
-            if(value <= LIBUSB_LOG_LEVEL_DEBUG){
-                libusbDebugLevel = value;
-            }
-            break;
-        case 'i':
-            if(value <= 1000000){
-                intervalUSec = value;
-            }
-            break;
-        default:
-            break;
-        }
+    if(!parseArguments(argc, argv, &params)){
+        cout << "Usage : steamcontrollersinger [-d][-lDEBUG_LEVEL] [-iINTERVAL] MIDI_FILE" << endl;
+        return 1;
     }
 
 
@@ -233,7 +257,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    libusb_set_debug(NULL, libusbDebugLevel);
+    libusb_set_debug(NULL, params.libusbDebugLevel);
 
     //Gaining access to Steam Controller
     dev_handle = SteamController_OpenAndClaim(&interface_num);
@@ -242,7 +266,9 @@ int main(int argc, char** argv)
 
 
     //Playing song
-    playSong(dev_handle,midiSong,intervalUSec);
+    do{
+        playSong(dev_handle,params.midiSong,params.intervalUSec);
+    }while(params.demoMode);
 
 
     //Releasing access to Steam Controller

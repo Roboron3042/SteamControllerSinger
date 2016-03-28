@@ -93,7 +93,7 @@ typedef enum
 }
 MidiFileEventType_t;
 
-MidiFile_t MidiFile_load(char *filename);
+MidiFile_t MidiFile_load(const char *filename);
 int MidiFile_save(MidiFile_t midi_file, const char* filename);
 
 MidiFile_t MidiFile_new(int file_format, MidiFileDivisionType_t division_type, int resolution);
