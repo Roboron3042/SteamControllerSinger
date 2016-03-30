@@ -140,7 +140,6 @@ bool isThisEventMaskingPreviousEvent(MidiFileEvent_t currentEvent, MidiFileEvent
     return (MidiFileEvent_isNoteEndEvent(currentEvent)
             && MidiFileEvent_isNoteStartEvent(previousEvent)
             && MidiFileNoteEndEvent_getChannel(currentEvent) == MidiFileNoteStartEvent_getChannel(previousEvent)
-            && MidiFileNoteEndEvent_getNote(currentEvent) == MidiFileNoteStartEvent_getNote(previousEvent)
             && MidiFileEvent_getTick(currentEvent) == MidiFileEvent_getTick(previousEvent));
 }
 
@@ -299,7 +298,7 @@ void abortPlaying(int){
     SteamController_Close(&steamController1);
 
     cout << endl<< "Aborted " << endl;
-
+    cout.flush();
     exit(1);
 }
 
