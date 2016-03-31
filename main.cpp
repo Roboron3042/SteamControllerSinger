@@ -1,9 +1,12 @@
 #include <iostream>
+#include <chrono>
+
 #include <stdint-gcc.h>
 #include <unistd.h>
 #include <stdint.h>
-#include <chrono>
+
 #include <signal.h>
+#include <stdio.h>
 
 #include "libusb/libusb.h"
 #include "midifile/midifile.h"
@@ -13,7 +16,7 @@
 #define DEFAULT_INTERVAL_USEC               10000
 
 #define DURATION_MAX        -1
-#define NOTE_STOP           128
+#define NOTE_STOP           -1
 
 using namespace std;
 
@@ -80,7 +83,7 @@ void SteamController_Close(SteamControllerInfos* controller){
 }
 
 
-int SteamController_PlayNote(SteamControllerInfos* controller, int haptic, unsigned int note,double duration = DURATION_MAX){
+int SteamController_PlayNote(SteamControllerInfos* controller, int haptic, int note,double duration = DURATION_MAX){
     double midiFrequency[128]  = {8.1758, 8.66196, 9.17702, 9.72272, 10.3009, 10.9134, 11.5623, 12.2499, 12.9783, 13.75, 14.5676, 15.4339, 16.3516, 17.3239, 18.354, 19.4454, 20.6017, 21.8268, 23.1247, 24.4997, 25.9565, 27.5, 29.1352, 30.8677, 32.7032, 34.6478, 36.7081, 38.8909, 41.2034, 43.6535, 46.2493, 48.9994, 51.9131, 55, 58.2705, 61.7354, 65.4064, 69.2957, 73.4162, 77.7817, 82.4069, 87.3071, 92.4986, 97.9989, 103.826, 110, 116.541, 123.471, 130.813, 138.591, 146.832, 155.563, 164.814, 174.614, 184.997, 195.998, 207.652, 220, 233.082, 246.942, 261.626, 277.183, 293.665, 311.127, 329.628, 349.228, 369.994, 391.995, 415.305, 440, 466.164, 493.883, 523.251, 554.365, 587.33, 622.254, 659.255, 698.456, 739.989, 783.991, 830.609, 880, 932.328, 987.767, 1046.5, 1108.73, 1174.66, 1244.51, 1318.51, 1396.91, 1479.98, 1567.98, 1661.22, 1760, 1864.66, 1975.53, 2093, 2217.46, 2349.32, 2489.02, 2637.02, 2793.83, 2959.96, 3135.96, 3322.44, 3520, 3729.31, 3951.07, 4186.01, 4434.92, 4698.64, 4978.03, 5274.04, 5587.65, 5919.91, 6271.93, 6644.88, 7040, 7458.62, 7902.13, 8372.02, 8869.84, 9397.27, 9956.06, 10548.1, 11175.3, 11839.8, 12543.9};
 
     unsigned char dataBlob[64] = {0x8f,
@@ -97,7 +100,7 @@ int SteamController_PlayNote(SteamControllerInfos* controller, int haptic, unsig
                                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-    if(note >= NOTE_STOP){
+    if(note == NOTE_STOP){
         note = 0;
         duration = 0.0;
     }
@@ -136,17 +139,9 @@ float timeElapsedSince(std::chrono::steady_clock::time_point tOrigin){
     return time_span.count();
 }
 
-bool isThisEventMaskingPreviousEvent(MidiFileEvent_t currentEvent, MidiFileEvent_t previousEvent){
-    return (MidiFileEvent_isNoteEndEvent(currentEvent)
-            && MidiFileEvent_isNoteStartEvent(previousEvent)
-            && MidiFileNoteEndEvent_getChannel(currentEvent) == MidiFileNoteStartEvent_getChannel(previousEvent)
-            && MidiFileEvent_getTick(currentEvent) == MidiFileEvent_getTick(previousEvent));
-}
 
-
-
-void displayCurrentNote(int channel, unsigned int note){
-    static unsigned int notePerChannel[CHANNEL_COUNT] = {NOTE_STOP, NOTE_STOP};
+void displayPlayedNotes(int channel, int8_t note){
+    static int8_t notePerChannel[CHANNEL_COUNT] = {NOTE_STOP, NOTE_STOP};
     const char* textPerChannel[CHANNEL_COUNT] = {"LEFT haptic : ",", RIGHT haptic : "};
     const char* noteBaseNameArray[12] = {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
 
@@ -159,7 +154,7 @@ void displayCurrentNote(int channel, unsigned int note){
         cout << textPerChannel[i];
 
         //Write empty string
-        if(notePerChannel[i] >= NOTE_STOP){
+        if(notePerChannel[i] == NOTE_STOP){
             cout << "OFF";
         }
         else{
@@ -195,6 +190,9 @@ void playSong(SteamControllerInfos* controller,const ParamsStruct params){
     cout << "Starting playback of " <<params.midiSong  << endl;
     sleep(1);
 
+    //This will contains the previous events accepted for each channel
+    MidiFileEvent_t acceptedEventPerChannel[CHANNEL_COUNT] = {0};
+
     //Get current time point, will be used to know elapsed time
     std::chrono::steady_clock::time_point tOrigin = std::chrono::steady_clock::now();
 
@@ -203,17 +201,17 @@ void playSong(SteamControllerInfos* controller,const ParamsStruct params){
     while(currentEvent != NULL){
         usleep(params.intervalUSec);
 
+        //This will contains the events to play
+        MidiFileEvent_t eventsToPlay[CHANNEL_COUNT] = {NULL};
+
         //We now need to play all events with tick < currentTime
         long currentTick = MidiFile_getTickFromTime(midifile,timeElapsedSince(tOrigin));
 
-        //This will contain the events to send to the Steam Controller
-        MidiFileEvent_t eventsToPlay[CHANNEL_COUNT] = {NULL};
-
-        //Iterate through all events until the current time
+        //Iterate through all events until the current time, and selecte potential events to play
         for( ; currentEvent != NULL && MidiFileEvent_getTick(currentEvent) < currentTick ; currentEvent = MidiFileEvent_getNextEventInFile(currentEvent)){
 
-            //Only process Note events
-            if (!MidiFileEvent_isNoteEvent(currentEvent)) continue;
+            //Only process note start events or note end events matching previous event
+            if (!MidiFileEvent_isNoteStartEvent(currentEvent) && !MidiFileEvent_isNoteEndEvent(currentEvent)) continue;
 
             //Get channel event
             int eventChannel = MidiFileVoiceEvent_getChannel(currentEvent);
@@ -221,12 +219,20 @@ void playSong(SteamControllerInfos* controller,const ParamsStruct params){
             //If channel is other than 0 or 1, skip this event, we cannot play it with only 1 steam controller
             if(eventChannel < 0 || !(eventChannel < CHANNEL_COUNT)) continue;
 
-            //Check that this event is not masking another event
-            //( this can happen when OFF and ON events share same timetick ,note and channel if OFF events arrives after ON event)
-            if(isThisEventMaskingPreviousEvent(currentEvent, eventsToPlay[eventChannel])) continue;
+            //If event is note off and does not match previous played event, skip it
+            if(MidiFileEvent_isNoteEndEvent(currentEvent)){
+                MidiFileEvent_t previousEvent = acceptedEventPerChannel[eventChannel];
 
-            //If we arrive here, this event match all conditions
-            eventsToPlay[eventChannel]=currentEvent;
+                //Skip if current event is not ending previous event,
+                // or if they share the same tick ( end event after start evetn on same tick )
+                if(MidiFileNoteStartEvent_getNote(previousEvent) != MidiFileNoteEndEvent_getNote(currentEvent)
+                ||(MidiFileEvent_getTick(currentEvent) == MidiFileEvent_getTick(previousEvent)))
+                    continue;
+            }
+
+            //If we arrive here, this event is accepted
+            eventsToPlay[eventChannel] = currentEvent;
+            acceptedEventPerChannel[eventChannel]=currentEvent;
         }
 
         //Now play the last events found
@@ -234,18 +240,18 @@ void playSong(SteamControllerInfos* controller,const ParamsStruct params){
             MidiFileEvent_t selectedEvent = eventsToPlay[currentChannel];
 
             //If no note event available on the channel, skip it
-            if(selectedEvent == NULL && !MidiFileEvent_isNoteEvent(selectedEvent)) continue;
+            if(!MidiFileEvent_isNoteEvent(selectedEvent)) continue;
 
             //Set note event
-            unsigned int eventNote = NOTE_STOP;
+            int8_t eventNote = NOTE_STOP;
             if(MidiFileEvent_isNoteStartEvent(selectedEvent)){
                 eventNote = MidiFileNoteStartEvent_getNote(selectedEvent);
             }
 
+            //Play notes
             SteamController_PlayNote(controller,currentChannel,eventNote);
-            displayCurrentNote(currentChannel, eventNote);
+            displayPlayedNotes(currentChannel,eventNote);
         }
-
     }
 
     cout <<endl<< "Playback completed " << endl;

@@ -257,7 +257,7 @@ static void add_event(MidiFileEvent_t new_event)
 
 	MidiFileEvent_t event;
 
-	for (event = new_event->track->last_event; (event != NULL) && (new_event->tick < event->tick); event = event->previous_event_in_track) {}
+    for (event = new_event->track->last_event; (event != NULL) && (new_event->tick < event->tick); event = event->previous_event_in_track) {}
 
 	new_event->previous_event_in_track = event;
 
@@ -281,7 +281,7 @@ static void add_event(MidiFileEvent_t new_event)
 		new_event->next_event_in_track->previous_event_in_track = new_event;
 	}
 
-	for (event = new_event->track->midi_file->last_event; (event != NULL) && (new_event->tick < event->tick); event = event->previous_event_in_file) {}
+    for (event = new_event->track->midi_file->last_event; (event != NULL) && (new_event->tick < event->tick); event = event->previous_event_in_file) {}
 
 	new_event->previous_event_in_file = event;
 
