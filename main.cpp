@@ -143,7 +143,7 @@ float timeElapsedSince(std::chrono::steady_clock::time_point tOrigin){
 void displayPlayedNotes(int channel, int8_t note){
     static int8_t notePerChannel[CHANNEL_COUNT] = {NOTE_STOP, NOTE_STOP};
     const char* textPerChannel[CHANNEL_COUNT] = {"LEFT haptic : ",", RIGHT haptic : "};
-    const char* noteBaseNameArray[12] = {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
+    const char* noteBaseNameArray[12] = {" C","C#"," D","D#"," E"," F","F#"," G","G#"," A","A#"," B"};
 
     if(channel >= CHANNEL_COUNT)
         return;
@@ -155,16 +155,20 @@ void displayPlayedNotes(int channel, int8_t note){
 
         //Write empty string
         if(notePerChannel[i] == NOTE_STOP){
-            cout << "OFF";
+            cout << "OFF ";
         }
         else{
             //Write note name
             cout << noteBaseNameArray[notePerChannel[i]%12];
-            cout << (notePerChannel[i]/12)-1;
+            int octave = (notePerChannel[i]/12)-1;
+            cout << octave;
+            if(octave >= 0 ){
+                cout << " ";
+            }
         }
     }
 
-    cout << "           \r" ;
+    cout << "\r" ;
     cout.flush();
 }
 
