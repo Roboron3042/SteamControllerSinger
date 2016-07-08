@@ -268,14 +268,16 @@ void playSong(SteamControllerInfos* controller,const ParamsStruct params){
 bool parseArguments(int argc, char** argv, ParamsStruct* params){
     int c;
     while ( (c = getopt(argc, argv, "l:i:r")) != -1) {
-        unsigned long int value = strtoul(optarg,NULL,10);
-        switch(c){
+        unsigned long int value;
+	switch(c){
         case 'l':
+	    value = strtoul(optarg,NULL,10);
             if(value <= LIBUSB_LOG_LEVEL_DEBUG){
                 params->libusbDebugLevel = value;
             }
             break;
         case 'i':
+	    value = strtoul(optarg,NULL,10);
             if(value <= 1000000){
                 params->intervalUSec = value;
             }
