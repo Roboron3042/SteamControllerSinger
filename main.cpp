@@ -272,13 +272,13 @@ bool parseArguments(int argc, char** argv, ParamsStruct* params){
 	switch(c){
         case 'l':
 	    value = strtoul(optarg,NULL,10);
-            if(value <= LIBUSB_LOG_LEVEL_DEBUG){
+            if(value >= LIBUSB_LOG_LEVEL_NONE && value <= LIBUSB_LOG_LEVEL_DEBUG){
                 params->libusbDebugLevel = value;
             }
             break;
         case 'i':
 	    value = strtoul(optarg,NULL,10);
-            if(value <= 1000000){
+            if(value <= 1000000 && value > 0){
                 params->intervalUSec = value;
             }
             break;
