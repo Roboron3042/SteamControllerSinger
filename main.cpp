@@ -36,7 +36,7 @@ struct SteamControllerInfos{
 SteamControllerInfos steamController1;
 
 
-bool SteamController_OpenAndClaim(SteamControllerInfos* controller){
+bool SteamController_Open(SteamControllerInfos* controller){
     if(!controller)
         return false;
 
@@ -59,7 +59,11 @@ bool SteamController_OpenAndClaim(SteamControllerInfos* controller){
 
     //On Linux, automatically detach and reattach kernel module
     libusb_set_auto_detach_kernel_driver(controller->dev_handle,1);
+    
+    return true;
+}
 
+bool SteamController_Claim(SteamControllerInfos* controller){
     //Claim the USB interface controlling the haptic actuators
     int r = libusb_claim_interface(controller->dev_handle,controller->interfaceNum);
     if(r < 0) {
@@ -79,7 +83,6 @@ void SteamController_Close(SteamControllerInfos* controller){
         std::cin.ignore();
         return;
     }
-    libusb_close(controller->dev_handle);
 }
 
 
@@ -126,7 +129,7 @@ int SteamController_PlayNote(SteamControllerInfos* controller, int haptic, int n
     r = libusb_control_transfer(controller->dev_handle,0x21,9,0x0300,2,dataBlob,64,1000);
     if(r < 0) {
         cout<<"Command Error "<<r<< endl;
-        return 1;
+        exit(0);
     }
 
     return 0;
@@ -199,9 +202,11 @@ void playSong(SteamControllerInfos* controller,const ParamsStruct params){
 
     //Get current time point, will be used to know elapsed time
     std::chrono::steady_clock::time_point tOrigin = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point tRestart = std::chrono::steady_clock::now();
 
     //Iterate through events
     MidiFileEvent_t currentEvent = MidiFile_getFirstEvent(midifile);
+    
     while(currentEvent != NULL){
         usleep(params.intervalUSec);
 
@@ -210,6 +215,13 @@ void playSong(SteamControllerInfos* controller,const ParamsStruct params){
 
         //We now need to play all events with tick < currentTime
         long currentTick = MidiFile_getTickFromTime(midifile,timeElapsedSince(tOrigin));
+        
+        //Every 5 seconds, reclaim the controller to avoid timeouts
+        if(timeElapsedSince(tRestart) > 5){
+            tRestart = std::chrono::steady_clock::now();
+            SteamController_Close(&steamController1);
+            SteamController_Claim(&steamController1);
+        }
 
         //Iterate through all events until the current time, and selecte potential events to play
         for( ; currentEvent != NULL && MidiFileEvent_getTick(currentEvent) < currentTick ; currentEvent = MidiFileEvent_getNextEventInFile(currentEvent)){
@@ -343,7 +355,10 @@ int main(int argc, char** argv)
     libusb_set_debug(NULL, params.libusbDebugLevel);
 
     //Gaining access to Steam Controller
-    if(!SteamController_OpenAndClaim(&steamController1)){
+    if(!SteamController_Open(&steamController1)){
+        return 1;
+    }
+    if(!SteamController_Claim(&steamController1)){
         return 1;
     }
 
@@ -358,6 +373,8 @@ int main(int argc, char** argv)
 
     //Releasing access to Steam Controller
     SteamController_Close(&steamController1);
+    
+    libusb_close((&steamController1)->dev_handle);
 
     libusb_exit(NULL);
 
