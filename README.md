@@ -1,8 +1,8 @@
-#Steam Controller Singer
+# Steam Controller Singer
 
 This project is a fork of [Pila's SteamControllerSinger](https://gitlab.com/Pilatomic/SteamControllerSinger) including a dirty fix to make the Steam Controller sing again.
 
-##HOW TO
+## HOW TO
 
 1. Turn on your Steam Controller
 
@@ -13,7 +13,7 @@ This project is a fork of [Pila's SteamControllerSinger](https://gitlab.com/Pila
 4. Enjoy!
 
 
-##MORE INFORMATIONS
+## MORE INFORMATIONS
 
 Usage from command prompt :
 	steamcontrollersinger [-r][-l DEBUG_LEVEL] [-i INTERVAL] MIDI_FILE"
@@ -32,7 +32,7 @@ Midi files tips :
 
 	Avoid multiple notes active at the same time on the same channel, since haptic actuators can only play one note
 
-##CHANGELOG
+## CHANGELOG
 [V1.7]
     - Fixed music stopped playing after a few seconds
 
