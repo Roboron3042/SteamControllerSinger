@@ -217,7 +217,7 @@ void playSong(SteamControllerInfos* controller,const ParamsStruct params){
         long currentTick = MidiFile_getTickFromTime(midifile,timeElapsedSince(tOrigin));
         
         //Every 5 seconds, reclaim the controller to avoid timeouts
-        if(timeElapsedSince(tRestart) > 5){
+        if(timeElapsedSince(tRestart) > 2){
             tRestart = std::chrono::steady_clock::now();
             SteamController_Close(&steamController1);
             SteamController_Claim(&steamController1);
