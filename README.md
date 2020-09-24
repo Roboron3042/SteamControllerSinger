@@ -2,6 +2,8 @@
 
 This project is a fork of [Pila's SteamControllerSinger](https://gitlab.com/Pilatomic/SteamControllerSinger) including a dirty fix to make the Steam Controller sing again.
 
+**Note: Steam Controller Singer currently only works on GNU/Linux, and this fork was created to address a GNU/Linux-only issue. Therefore, no Microsoft Windows executable is provided (if you want one, go to the original source), and no Microsoft Windows related issues will be accepted.**
+
 ## HOW TO
 
 1. Turn on your Steam Controller
