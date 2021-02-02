@@ -8,7 +8,7 @@
 #include <signal.h>
 #include <stdio.h>
 
-#include "libusb/libusb.h"
+#include <libusb.h>
 #include "midifile/midifile.h"
 
 #define STEAM_CONTROLLER_MAGIC_PERIOD_RATIO 495483.0
@@ -18,6 +18,8 @@
 #define DURATION_MAX        -1
 #define NOTE_STOP           -1
 
+#define DEFAULT_RECLAIM_PERIOD 2
+
 using namespace std;
 
 
@@ -26,6 +28,7 @@ struct ParamsStruct{
     unsigned int intervalUSec;
     int libusbDebugLevel;
     bool repeatSong;
+    int reclaimPeriod;
 };
 
 struct SteamControllerInfos{
@@ -215,9 +218,9 @@ void playSong(SteamControllerInfos* controller,const ParamsStruct params){
 
         //We now need to play all events with tick < currentTime
         long currentTick = MidiFile_getTickFromTime(midifile,timeElapsedSince(tOrigin));
-        
-        //Every 5 seconds, reclaim the controller to avoid timeouts
-        if(timeElapsedSince(tRestart) > 2){
+
+        //Every reclaimPeriod seconds, reclaim the controller to avoid timeouts
+        if(timeElapsedSince(tRestart) > params.reclaimPeriod){
             tRestart = std::chrono::steady_clock::now();
             SteamController_Close(&steamController1);
             SteamController_Claim(&steamController1);
@@ -279,9 +282,15 @@ void playSong(SteamControllerInfos* controller,const ParamsStruct params){
 
 bool parseArguments(int argc, char** argv, ParamsStruct* params){
     int c;
-    while ( (c = getopt(argc, argv, "l:i:r")) != -1) {
+    while ( (c = getopt(argc, argv, "c:l:i:r")) != -1) {
         unsigned long int value;
 	switch(c){
+        case 'c':
+	    value = strtoul(optarg,NULL,10);
+            if(value <= 1000000 && value > 0){
+                params->reclaimPeriod = value;
+            }
+            break;
         case 'l':
 	    value = strtoul(optarg,NULL,10);
             if(value >= LIBUSB_LOG_LEVEL_NONE && value <= LIBUSB_LOG_LEVEL_DEBUG){
@@ -335,11 +344,12 @@ int main(int argc, char** argv)
     params.libusbDebugLevel = LIBUSB_LOG_LEVEL_NONE;
     params.repeatSong = false;
     params.midiSong = "\0";
+    params.reclaimPeriod = DEFAULT_RECLAIM_PERIOD;
 
 
     //Parse arguments
     if(!parseArguments(argc, argv, &params)){
-        cout << "Usage : steamcontrollersinger [-r][-lDEBUG_LEVEL] [-iINTERVAL] MIDI_FILE" << endl;
+        cout << "Usage : steamcontrollersinger [-r][-lDEBUG_LEVEL] [-iINTERVAL] [-cRECLAIM_PERIOD] MIDI_FILE" << endl;
         return 1;
     }
 
