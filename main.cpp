@@ -56,9 +56,9 @@ bool SteamController_Open(SteamControllerInfos* controller){
         controller->interfaceNum = 1;
     }
     else if ((dev_handle = libusb_open_device_with_vid_pid(NULL, 0x28DE, 0x1205)) != NULL){ // Steam Deck
-	cout<<"Found Steam Deck built-in controller"<<endl;
-	controller->dev_handle = dev_handle;
-	controller->interfaceNum = 2;
+        cout<<"Found Steam Deck built-in controller"<<endl;
+        controller->dev_handle = dev_handle;
+        controller->interfaceNum = 2;
     }
     else{
         cout<<"No device found"<<endl;
