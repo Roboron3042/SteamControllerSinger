@@ -2,6 +2,8 @@
 
 This project is a fork of [Pila's SteamControllerSinger](https://gitlab.com/Pilatomic/SteamControllerSinger) including a dirty fix to make the Steam Controller sing again.
 
+The Steam Deck is also supported, since its built-in controller is very similar to the Steam Controller!
+
 **Note: Steam Controller Singer currently only works on GNU/Linux, and this fork was created to address a GNU/Linux-only issue. Therefore, no Microsoft Windows executable is provided (if you want one, go to the original source), and no Microsoft Windows related issues will be accepted.**
 
 ## HOW TO
@@ -68,3 +70,5 @@ Midi files may need to be edited with a software such [MidiEditor](https://www.m
 ## Compiling
 
 You will need libusb(-dev) and pkgconf. If you have them, just type `make`.
+
+On the Steam Deck, you'll also need the base-devel, gcc, and linux-api-headers packages, in addition to libusb. You can install these with pacman after running `sudo steamos-readonly disable`.
