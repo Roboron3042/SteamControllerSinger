@@ -2,9 +2,7 @@
 
 This project is a fork of [Pila's SteamControllerSinger](https://gitlab.com/Pilatomic/SteamControllerSinger) including a dirty fix to make the Steam Controller sing again.
 
-The Steam Deck is also supported, since its built-in controller is very similar to the Steam Controller!
-
-**Note: Steam Controller Singer currently only works on GNU/Linux, and this fork was created to address a GNU/Linux-only issue. Therefore, no Microsoft Windows executable is provided (if you want one, go to the original source), and no Microsoft Windows related issues will be accepted.**
+This fork only supports the original Steam Controller (2015) and the Steam Deck. There is a more up-to-date fork with support for newer devices called [SteamHapticsSinger](https://github.com/CrazyCritic89/SteamHapticsSinger). You may want to try that instead.
 
 ## HOW TO
 
@@ -15,7 +13,7 @@ The Steam Deck is also supported, since its built-in controller is very similar 
 
 ### Where can I find midi songs?
 
-You can find midi songs ready to be played with Steam Controller Singer in my [Personal Collection](https://mega.nz/#F!BWpEWKzB!r7WPw5bZ_domN4pk-FJsjg) (I'll keep updating it with more songs). You can also download midi songs from various websites such [musescore.com](https://musescore.com/), but they may or may not be ready to be played with Steam Controller Singer (see Midi files tips in that case).
+You can find midi songs ready to be played with Steam Controller Singer in my [Personal Collection](https://cloud.michan.es/s/JmjxLLA5E2fJ3GK). You can also download midi songs from various websites such as [musescore.com](https://musescore.com/), but they may or may not be ready to be played with Steam Controller Singer (see Midi files tips in that case).
 
 ### Usage from command prompt:
 	steamcontrollersinger [-r][-l DEBUG_LEVEL] [-i INTERVAL] [-c RECLAIM_PERIOD] MIDI_FILE
